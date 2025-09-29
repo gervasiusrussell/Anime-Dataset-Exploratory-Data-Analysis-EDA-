@@ -1,0 +1,151 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-07-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+link EDA : https://towardsdatascience.com/exploratory-data-analysis-in-r-for-beginners-fe031add7072
+
+## Importing Data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+raw_data <- read.csv("top_animes_after_cleaning.csv")
+
+raw_data$Licensors[raw_data$Licensors == "None found, add some"] <- NA
+str(raw_data)
+```
+
+```{r}
+clean_data <- raw_data[,c(1:5, 8:18, 20, 22:27)]
+```
+
+```{r}
+#clean_data[, c("Type", "Episodes", "Status", "Licensors", "Studios", "Source", "Genres", "Duration", "Rating", "Themes", "Demographics", "Seasonal")] <- lapply(clean_data[, c("Type", "Episodes", "Status", "Licensors", "Studios", "Source", "Genres", "Duration", "Rating", "Themes", "Demographics", "Seasonal")], as.factor)
+```
+
+
+```{r}
+str(clean_data)
+```
+
+```{r}
+summary(clean_data)
+```
+```{r}
+clean_data <- clean_data[1:1000,]
+library(ggplot2)
+```
+
+```{r}
+colSums(is.na(clean_data))
+```
+
+
+```{r}
+#Cara 1 mengganti na value dengan mode
+mode_func <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(ux, x)))]
+}
+
+mode_value <- mode_func(clean_data$Licensors)
+
+clean_data$Licensors[is.na(clean_data$Licensors)] <- mode_value
+```
+
+```{r}
+#Cara 2
+mode_value2 <- names(sort(table(clean_data$Licensors), decreasing = TRUE))[1]
+
+clean_data$Licensors[is.na(clean_data$Licensors)] <- mode_value2
+```
+
+```{r}
+clean_data <- drop_na(clean_data)
+```
+
+```{r}
+str(clean_data)
+```
+
+```{r}
+ggplot(clean_data, aes(x = Type, y= Members, fill = Type)) +
+  geom_boxplot() +
+  facet_wrap(~Type, nrow = 1)
+```
+
+```{r}
+df1 <- clean_data %>% select(Source, Score) %>%
+  group_by(Source) %>% summarize(mean_score = mean(Score, na.rm = T))
+
+ggplot(df1, aes(x = reorder(Source, mean_score), y=mean_score)) + 
+  geom_bar(stat = "identity", position = "dodge", fill = "blue") +
+  scale_y_continuous(limits = c(0,10),
+                     breaks = seq(0,10,0.5)) + 
+  coord_flip() + theme_light() +
+  labs(x = "Source Film",
+       y = "Rate Score Film")
+```
+
+```{r}
+df2 <- clean_data[,c(12,14,15,16,18,19,20)]
+
+res <- cor(df2)
+```
+
+```{r}
+library(corrplot)
+corrplot(res, method = "number", type = "up")
+```
+
+```{r}
+library(plotly)
+plot_ly(df2, 
+        x = ~Favorites,
+        y = ~Recommended,
+        type = "scatter",
+        mode = "markers")
+```
+
+```{r}
+clean_data %>% group_by(Rating) %>%
+  mutate(prop = Score/sum(Score, na.rm = T)) %>%
+  plot_ly(x = ~Rating,
+          y = ~prop,
+          color = ~Type,
+          type = "bar") %>%
+  layout(barmode = "stack") 
+```
+
+```{r}
+clean_data %>% group_by(Rating) %>%
+  mutate(prop = Score/sum(Score, na.rm = T)) %>%
+  ggplot(aes(x = Rating, y = prop,
+             fill = Type)) +
+  geom_bar(stat = "identity", position = "stack") + 
+  labs(x = "Rating",
+       y = "Distribution Score")
+```
+
+
+```{r}
+df3 <- table(clean_data$Episodes) %>% as.data.frame() %>%
+  rename(episode = Var1) %>% arrange(episode) ##kenapa ga ke sortinggg berdasarkan episode anjgg
+
+plot_ly(df3,
+        x = ~episode,
+        y = ~Freq,
+        type = "scatter",
+        mode = "line")
+```
+
+
+
